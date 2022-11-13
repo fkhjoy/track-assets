@@ -1,12 +1,15 @@
 from urllib import response
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
+from django.http import Http404
 
 from rest_framework import generics, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.authentication import TokenAuthentication
+from rest_framework import permissions
 from django.contrib.auth.decorators import user_passes_test
+from django.utils import timezone
 
 from .serializers import DeviceSerializer, CompanyEmployeeSerializer, LogSerializer
 from accounts.models import User
@@ -15,10 +18,11 @@ from .models import Device, Log, CompanyEmployee
 class AddDeviceView(generics.GenericAPIView):
     serializer_class = DeviceSerializer
     authentication_classes = [TokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request: Request):
         user = request.user
-        if user.is_authenticated and user.is_company:
+        if user.is_company:
 
             data = request.data
             
@@ -35,16 +39,17 @@ class AddDeviceView(generics.GenericAPIView):
 
                 return Response(data=response, status=status.HTTP_201_CREATED)      
             return Response(data=serialized.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response(data={"message": "Unauthorized"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data={"message": "Not authorized"}, status=status.HTTP_400_BAD_REQUEST)
 
 class AddEmployeeView(generics.GenericAPIView):
     serializer_class = CompanyEmployeeSerializer
     authentication_classes = [TokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request: Request):
         user = request.user
         
-        if user.is_authenticated and user.is_company:
+        if user.is_company:
 
             employee_email = request.data['employee_email']
             print(employee_email)
@@ -70,16 +75,25 @@ class AddEmployeeView(generics.GenericAPIView):
 
                 return Response(data=response, status=status.HTTP_201_CREATED)      
             return Response(data=serialized.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response(data={"message": "Unauthorized"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data={"message": "Not authorized"}, status=status.HTTP_400_BAD_REQUEST)
 
 class HandoutDeviceView(generics.GenericAPIView):
     serializer_class = LogSerializer
     authentication_classes = [TokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request: Request):
+        user = request.user
+
+        if user.is_company:
+            devices = Log.objects.filter(device__owner=user.pk).all()
+            serialized = self.serializer_class(devices, many=True)
+            return Response(serialized.data)
 
     def post(self, request: Request):
         user = request.user 
         
-        if user.is_authenticated and user.is_company:
+        if user.is_company:
             employee_email = request.data['employee_email']
             device_id = request.data['device_id']
             condition = request.data['condition']
@@ -109,6 +123,39 @@ class HandoutDeviceView(generics.GenericAPIView):
                     return Response(data=serialized.errors, status=status.HTTP_400_BAD_REQUEST)
                 return Response(data={"message":"Employee or Device not available"}, status=status.HTTP_400_BAD_REQUEST)
             return Response(data={"message":"Device not available"}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(data={"message": "Unauthorized"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data={"message": "Not authorized"}, status=status.HTTP_400_BAD_REQUEST)
 
 
+class ReturnDeviceView(generics.GenericAPIView):
+    serializer_class = LogSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self, pk, user_id):
+        try:
+            return Log.objects.get(pk=pk, device__owner=user_id)
+        except Log.DoesNotExist:
+            raise Http404
+
+    def patch(self, request:Request, pk):
+        user = request.user
+        if user.is_company:
+            log = self.get_object(pk, user.pk)
+            log.return_time = timezone.now()
+            serialized = self.serializer_class(log, data=request.data, partial=True)
+            if serialized.is_valid():
+                device = log.device
+                device.is_available = True 
+                device.save()
+                serialized.save()
+                return Response(serialized.data)
+            return Response(serialized.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data={"message":"Not authorized"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request: Request, pk):
+        user = request.user
+        if user.is_company:
+            log = self.get_object(pk, user.pk)
+            serialized = self.serializer_class(log)
+            return Response(serialized.data)
+        return Response(data={"message":"Not authorized"}, status=status.HTTP_400_BAD_REQUEST)
