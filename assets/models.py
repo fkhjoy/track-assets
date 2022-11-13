@@ -1,6 +1,7 @@
 from django.db import models
 import datetime
 from accounts.models import User
+from django.utils import timezone
 
 class Device(models.Model):
     device_id = models.CharField(max_length=100, blank=False, null=False)
@@ -16,10 +17,14 @@ class Device(models.Model):
 class Log(models.Model):
     device = models.ForeignKey(Device, on_delete=models.CASCADE, blank=False, null=False)
     handed_to = models.ForeignKey(User, on_delete=models.CASCADE, blank=False, null=False)
-    checkout_time = models.DateTimeField(default=datetime.date.today)
+    checkout_time = models.DateTimeField(default=timezone.now)
     checkout_condition = models.TextField()
-    return_time = models.DateTimeField(blank=True)
-    return_condition = models.TextField()
+    return_time = models.DateTimeField(blank=True, null=True)
+    return_condition = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return self.device
+
+class CompanyEmployee(models.Model):
+    company = models.ForeignKey(User, blank=False, null=False, on_delete=models.CASCADE, related_name='company')
+    employee = models.OneToOneField(User, blank=False, null=False, on_delete=models.CASCADE, related_name='employee')
