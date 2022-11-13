@@ -56,7 +56,7 @@ class AddEmployeeView(generics.GenericAPIView):
             data = {}
             if User.objects.filter(email=employee_email).exists():
                 employee = User.objects.get(email=employee_email)
-                if not employee.is_company:
+                if employee.is_company:
                     return Response(data={"message":"Provide an employee mail"}, status=status.HTTP_400_BAD_REQUEST)
                 data['employee'] = employee.pk
             else:
