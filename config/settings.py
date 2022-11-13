@@ -44,6 +44,7 @@ INSTALLED_APPS = [
 
     #local
     'accounts',
+    'assets',
 ]
 
 AUTH_USER_MODEL = "accounts.User"
