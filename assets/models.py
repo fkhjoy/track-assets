@@ -23,8 +23,11 @@ class Log(models.Model):
     return_condition = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return self.device
+        return self.device.type+"-"+self.device.model
 
 class CompanyEmployee(models.Model):
     company = models.ForeignKey(User, blank=False, null=False, on_delete=models.CASCADE, related_name='company')
     employee = models.OneToOneField(User, blank=False, null=False, on_delete=models.CASCADE, related_name='employee')
+
+    def __str__(self):
+        return self.company.name + " "+self.employee.name
