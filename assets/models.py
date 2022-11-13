@@ -10,6 +10,9 @@ class Device(models.Model):
     owner = models.ForeignKey(User, blank=False, null=False, on_delete=models.CASCADE)
     is_available = models.BooleanField(default=True)
 
+    def __str__(self):
+        return self.type + "-" +self.model
+
 class Log(models.Model):
     device = models.ForeignKey(Device, on_delete=models.CASCADE, blank=False, null=False)
     handed_to = models.ForeignKey(User, on_delete=models.CASCADE, blank=False, null=False)
@@ -17,3 +20,6 @@ class Log(models.Model):
     checkout_condition = models.TextField()
     return_time = models.DateTimeField(blank=True)
     return_condition = models.TextField()
+
+    def __str__(self):
+        return self.device
