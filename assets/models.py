@@ -4,7 +4,7 @@ from accounts.models import User
 from django.utils import timezone
 
 class Device(models.Model):
-    device_id = models.CharField(max_length=100, blank=False, null=False)
+    device_id = models.CharField(max_length=100, unique=True, blank=False, null=False)
     type = models.CharField(max_length=100, blank=True)
     brand = models.CharField(max_length=100, blank=True)
     model = models.CharField(max_length=100, blank=True)
