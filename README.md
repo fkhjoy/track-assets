@@ -32,9 +32,9 @@ python manager.py runserver
 
 # sign up
 `POST` method endpoint: 
-```
+
 http://127.0.0.1:8000/api/v1/accounts/signup/
-```
+
 Data
 ```
 post_data = {
@@ -66,9 +66,9 @@ response with `status: 400` if email already registered
 # login
 
 `POST` method endpoint: 
-```
+
 http://127.0.0.1:8000/api/v1/accounts/login/
-```
+
 Data
 ```
 post_data = {
@@ -104,9 +104,9 @@ Otherwise the response with `status: 401` will be like
 
 # add employee
 `POST` method endpoint:
-```
+
 http://127.0.0.1:8000/api/v1/assets/add/employee/
-```
+
 Data
 ```
 post_data = {
@@ -138,9 +138,9 @@ response with `status: 400` if the employee is already under any company
 
 # add device
 `POST` method endpoint
-```
+
 http://127.0.0.1:8000/api/v1/assets/add/device/
-```
+
 data
 ```
 post_data = {
@@ -208,10 +208,10 @@ response with `status: 400` when the Device is already handed to someone or the 
 
 # return device
 `PATCH` method endpoint
-```
+
 http://127.0.0.1:8000/api/v1/assets/return_device/{log_id}
 
-```
+
 now posting with just the return_condition and the log will be updated.
 ```
 post data = {
@@ -233,9 +233,9 @@ response of detail with `status: 200`
 
 # device logs
 `GET` method endpoint
-```
+
 http://127.0.0.1:8000/api/v1/assets/device_logs
-```
+
 No params required
 
 response of list of all devices with `status: 200`
@@ -254,6 +254,5 @@ response of list of all devices with `status: 200`
 ]
 ```
 # All API Swagger UI
-```
+
 http://127.0.0.1:8000/api-documentation/
-```
