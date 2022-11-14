@@ -1,4 +1,4 @@
-from urllib import response
+from collections import OrderedDict
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.http import Http404
@@ -22,13 +22,17 @@ class AddDeviceView(generics.GenericAPIView):
 
     def post(self, request: Request):
         user = request.user
+        # checking if the user is company or not
         if user.is_company:
-
-            data = request.data
+            data = {}
+            data["device_id"] = request.data["device_id"]
+            data["type"] = request.data["type"]
+            data["brand"] = request.data["brand"]
+            data["model"] =  request.data["model"]
             
             data['owner'] = user.pk
             serialized = self.serializer_class(data=data)
-
+            
             if serialized.is_valid():
                 serialized.save()
 
@@ -39,7 +43,7 @@ class AddDeviceView(generics.GenericAPIView):
 
                 return Response(data=response, status=status.HTTP_201_CREATED)      
             return Response(data=serialized.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response(data={"message": "Not authorized"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data={"message": "Not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
 class AddEmployeeView(generics.GenericAPIView):
     serializer_class = CompanyEmployeeSerializer
@@ -48,15 +52,16 @@ class AddEmployeeView(generics.GenericAPIView):
 
     def post(self, request: Request):
         user = request.user
-        
+        #checking if the user is company or not
         if user.is_company:
 
             employee_email = request.data['employee_email']
-            print(employee_email)
             data = {}
+
+            # checking if the email is registered and employee or not
             if User.objects.filter(email=employee_email).exists():
                 employee = User.objects.get(email=employee_email)
-                if not employee.is_company:
+                if employee.is_company:
                     return Response(data={"message":"Provide an employee mail"}, status=status.HTTP_400_BAD_REQUEST)
                 data['employee'] = employee.pk
             else:
@@ -75,7 +80,7 @@ class AddEmployeeView(generics.GenericAPIView):
 
                 return Response(data=response, status=status.HTTP_201_CREATED)      
             return Response(data=serialized.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response(data={"message": "Not authorized"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data={"message": "Not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
 class HandoutDeviceView(generics.GenericAPIView):
     serializer_class = LogSerializer
@@ -89,21 +94,25 @@ class HandoutDeviceView(generics.GenericAPIView):
             devices = Log.objects.filter(device__owner=user.pk).all()
             serialized = self.serializer_class(devices, many=True)
             return Response(serialized.data)
-
+        return Response(data={"message": "Not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
     def post(self, request: Request):
         user = request.user 
         
+        # checking if the user is company or not
         if user.is_company:
             employee_email = request.data['employee_email']
             device_id = request.data['device_id']
             condition = request.data['condition']
             data = {}
+            # checking if the device is under the company
             if Device.objects.filter(device_id=device_id, owner=user.pk).exists():
                 device = Device.objects.filter(device_id=device_id, owner=user)[0]
                 employee = User.objects.filter(email=employee_email)[0]
                 
+                # checking if the employee is under the company
                 is_employee_company = CompanyEmployee.objects.filter(company=user.pk, employee=employee).exists()
                 
+                # hand out if the device is available and employee under the company
                 if device.is_available and is_employee_company:
                     data['device'] = device.pk
                     data['handed_to'] = employee.pk
@@ -116,6 +125,7 @@ class HandoutDeviceView(generics.GenericAPIView):
                             "message": "Handed out successfully",
                             "data": serialized.data
                         }
+                        # updating the device availability to False, so others can't take this
                         device.is_available = False
                         device.save()
 
@@ -123,7 +133,7 @@ class HandoutDeviceView(generics.GenericAPIView):
                     return Response(data=serialized.errors, status=status.HTTP_400_BAD_REQUEST)
                 return Response(data={"message":"Employee or Device not available"}, status=status.HTTP_400_BAD_REQUEST)
             return Response(data={"message":"Device not available"}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(data={"message": "Not authorized"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data={"message": "Not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class ReturnDeviceView(generics.GenericAPIView):
@@ -139,9 +149,11 @@ class ReturnDeviceView(generics.GenericAPIView):
 
     def patch(self, request:Request, pk):
         user = request.user
+        # checking if the user is company
         if user.is_company:
+            # getting the log for the device along company constraint
             log = self.get_object(pk, user.pk)
-            log.return_time = timezone.now()
+            log.return_time = timezone.now() # updating the return time
             serialized = self.serializer_class(log, data=request.data, partial=True)
             if serialized.is_valid():
                 device = log.device
@@ -150,7 +162,7 @@ class ReturnDeviceView(generics.GenericAPIView):
                 serialized.save()
                 return Response(serialized.data)
             return Response(serialized.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response(data={"message":"Not authorized"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data={"message":"Not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
     
     def get(self, request: Request, pk):
         user = request.user
@@ -158,4 +170,4 @@ class ReturnDeviceView(generics.GenericAPIView):
             log = self.get_object(pk, user.pk)
             serialized = self.serializer_class(log)
             return Response(serialized.data)
-        return Response(data={"message":"Not authorized"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(data={"message":"Not authorized"}, status=status.HTTP_401_UNAUTHORIZED)
