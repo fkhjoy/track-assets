@@ -126,3 +126,8 @@ class AssetTestCase(APITestCase):
         response = self.client.get("/api/v1/assets/device_logs")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
+
+        self.user.is_company = False
+        self.user.save()
+        response = self.client.get("/api/v1/assets/device_logs")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
